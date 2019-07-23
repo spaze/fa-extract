@@ -1,0 +1,8 @@
+{
+	"name": "spaze/fa-extract",
+	"description": "A tool to extract only used icons from Font Awesome JS/SVG icons sets",
+	"license": [
+		"MIT"
+	],
+	"type": "project"
+}

@@ -1,0 +1,102 @@
+#!/usr/bin/env php
+<?php
+namespace Foo;
+
+$ignoreDirs = [
+	'fontawesome',
+	'build',
+	'images',
+];
+$ignoreClasses = [
+	'fw',  // no fa- prefix
+];
+if (!isset($_SERVER['argv'][2])) {
+	log("Usage: {$_SERVER['argv'][0]} <dir> <fontawesomedir>");
+	exit(1);
+}
+$faLocation = $_SERVER['argv'][2];
+$iconsJs = [
+	'fab' => '/js/brands.js',
+	'far' => '/js/regular.js',
+	'fas' => '/js/solid.js',
+	null => '/js/fontawesome.js',
+];
+
+$used = [];
+$iterator = new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($_SERVER['argv'][1], \FilesystemIterator::SKIP_DOTS));
+foreach ($iterator as $fileinfo) {
+	try {
+		foreach ($ignoreDirs as $dir) {
+			if (strpos($fileinfo->getRealPath(), $dir) !== false) {
+				throw new \RuntimeException("Skipping directory {$dir}");
+			}
+		}
+	} catch (\RuntimeException $e) {
+		continue;
+	}
+
+	$file = file_get_contents($fileinfo->getRealPath());
+	$classes = implode('|', array_filter(array_keys($iconsJs)));
+	if (preg_match_all('/class=["\'].*\b(' . $classes . ')\b[^"]+/', $file, $classMatches)) {
+		foreach ($classMatches[1] as $key => $class) {
+			if (!isset($used[$class])) {
+				$used[$class] = [];
+			}
+			if (preg_match_all('/fa\-([a-z0-9-]+)/', $classMatches[0][$key], $faMatches)) {
+				foreach ($faMatches[1] as $icon) {
+					if (!in_array($icon, $ignoreClasses)) {
+						$used[$class][$icon] = true;
+					}
+				}
+			}
+		}
+	}
+}
+foreach ($used as &$value) {
+	ksort($value);
+	$value = array_keys($value);
+}
+log('Used icons: ' . var_export($used, true));
+$output = [];
+$isIconsArray = false;
+foreach ($iconsJs as $class => $file) {
+	log('Processing: ' . $faLocation . $file);
+	foreach (file($faLocation . $file) as $line) {
+		if ($isIconsArray && trim($line) === '};') {
+			$isIconsArray = false;
+		}
+		if ($isIconsArray) {
+			foreach ($used[$class] as $key => $icon) {
+				$regex = '/^\s+"' . preg_quote($icon) . '"/';
+				if (preg_match($regex, $line)) {
+					$output[] = $line;
+					unset($used[$class][$key]);
+				}
+			}
+		} else {
+			$output[] = $line;
+		}
+		if (trim($line) === 'var icons = {') {
+			$isIconsArray = true;
+		}
+	}
+}
+
+echo implode('', $output);
+
+foreach ($used as $key => $values) {
+	if (empty($values)) {
+		unset($used[$key]);
+	}
+}
+
+if (count($used) === 0) {
+	log('All Font Awesome icons found');
+} else {
+	log('Icons not found in Font Awesome files: ' . var_export($used, true));
+}
+
+function log(string $message): void
+{
+	fwrite(STDERR, $message . PHP_EOL);
+}
