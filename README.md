@@ -1,6 +1,8 @@
 # fa-extract
 A tool to extract only used icons from Font Awesome JS/SVG icons sets.
 
+### Unsupported, archived, I have started using a different icon pack (https://humbleicons.com/ by @Zraly) and a different loader (I embed SVG icons into my HTML with [spaze/svg-icons-latte](https://github.com/spaze/svg-icons-latte))
+
 This should be considered a quick and dirty hack, a *pre-alpha* code. I use it to make my Font Awesome JS file smaller but YMMV.
 
 ## Install
